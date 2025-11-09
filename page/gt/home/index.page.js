@@ -5,15 +5,36 @@ import { getDeviceInfo } from "@zos/device";
 import * as isoHandler from "./isometricHandler.js";
 import { event } from '@zos/ui'
 
-let touchedTile = null;
+let selectedTile = null;
 
+let world = [];
 
 const logger = Logger.getLogger("VoxWrista");
 Page({
-	onInit() {
+
+	onInit()
+	{
 		logger.debug("page onInit invoked");
+
+		for(let x = 0; x < 4; x++)
+		{
+			for(let y = 0; y < 4; y++)
+			{
+				for(let z = 0; z < 2; z++)
+				{
+					world.push({
+						x: x,
+						y: y,
+						z: z,
+						type: "grass"
+					});
+				}
+			}
+		}
 	},
-	build() {
+
+	build()
+	{
 		logger.debug("page build invoked");
 		 
 
@@ -25,6 +46,27 @@ Page({
 		console.log("Device Width: " + width + " Height: " + height);
 
 		const canvas = hmUI.createWidget(hmUI.widget.CANVAS, CANVAS_STYLE);
+
+		// Break and place buttons (bottom of screen)
+		const breakBtn = hmUI.createWidget(hmUI.widget.BUTTON, {
+			x: 20,
+			y: height - 80,
+			w: 80,
+			h: 60,
+			text: "Break",
+			text_size: 20,
+			bg_color: 0xFF0000,
+		});
+
+		const placeBtn = hmUI.createWidget(hmUI.widget.BUTTON, {
+			x: width - 100,
+			y: height - 80,
+			w: 80,
+			h: 60,
+			text: "Place",
+			text_size: 20,
+			bg_color: 0xFF0000,
+		});
 
 		let startX = 0, startY = isoHandler.h;
 		let rows = 4, cols = 4;
@@ -48,12 +90,17 @@ Page({
 
 		const render = () => {
 
+
+			
+
 			const drawCommands = [];
 
-			for(let i = 0; i < rows; i++)
+			/*for(let i = 0; i < rows; i++)
 			{
 				for(let j = 0; j < cols; j++)
 				{
+
+					let alpha = 255;
 
 					const tile_pos = {x: i, y: j};
 
@@ -61,9 +108,9 @@ Page({
 					let screenX = startX + orig_screen_pos.x;
 					let screenY = startY + orig_screen_pos.y;
 
-					if((touchedTile != null) && (touchedTile.x === i) && (touchedTile.y === j))
+					if((selectedTile != null) && (selectedTile.x === i) && (selectedTile.y === j))
 					{
-						screenY -= (isoHandler.h / 2) - 10;
+						alpha = 128;
 					}
 
 					drawCommands.push({
@@ -71,11 +118,37 @@ Page({
 						x: Math.round(screenX + centerX),
 						y: Math.round(screenY + centerY),
 						w: isoHandler.w,
-						h: isoHandler.h
+						h: isoHandler.h,
+						alpha: alpha,
 					});
 
 					//console.log(`Tile(${i},${j}): final = (${Math.round(screenX + centerX)}, ${Math.round(screenY + centerY)})`);
 				}
+			}*/
+
+			for(const block of world)
+			{
+				let alpha = 255;
+
+				const tile_pos = {x: block.x, y: block.y};
+
+				const orig_screen_pos = isoHandler.tile_to_screen_pixels(tile_pos);
+				let screenX = startX + orig_screen_pos.x;
+				let screenY = startY + orig_screen_pos.y - (block.z * (isoHandler.h / 2));
+
+				if((selectedTile != null) && (selectedTile.x === block.x) && (selectedTile.y === block.y) && (selectedTile.z === block.z))
+				{
+					alpha = 128;
+				}
+
+				drawCommands.push({
+					depth: block.x + block.y + block.z,
+					x: Math.round(screenX + centerX),
+					y: Math.round(screenY + centerY),
+					w: isoHandler.w,
+					h: isoHandler.h,
+					alpha: alpha,
+				});
 			}
 
 			drawCommands.sort((a,b) => a.depth - b.depth);
@@ -88,7 +161,7 @@ Page({
 					y: cmd.y,
 					w: cmd.w, // Width correction
 					h: cmd.h,
-					alpha:255,
+					alpha: cmd.alpha,
 					image: "blocks/grass.png"
 				});
 			}
@@ -105,11 +178,11 @@ Page({
 
 			if (hit.x >= 0 && hit.x < rows && hit.y >= 0 && hit.y < cols)
 			{
-				touchedTile = { x: hit.x, y: hit.y };
+				selectedTile = { x: hit.x, y: hit.y };
 			}
 			else
 			{
-				touchedTile = null;
+				selectedTile = null;
 			}
 
 
@@ -128,14 +201,20 @@ Page({
 				x: 10,
 				y: 260,
 				text_size: 30,
-				text: `Tile: (${touchedTile ? `${touchedTile.x},${touchedTile.y}` : "none"})`,
+				text: `Tile: (${selectedTile ? `${selectedTile.x},${selectedTile.y}` : "none"})`,
 			});
 
-		})
+		});
+
+		placeBtn.addEventListener(hmUI.event.CLICK_UP, () => {
+			console.log("Place button clicked");
+		});
 
 
 	},
-	onDestroy() {
+
+	onDestroy()
+	{
 		logger.debug("page onDestroy invoked");
 	},
 });
