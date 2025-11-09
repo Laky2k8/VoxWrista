@@ -1,0 +1,60 @@
+// These are the four numbers that define the transform, i-hat and j-hat
+const i_x = 1;
+const i_y = 0.5;
+const j_x = -1;
+const j_y = 0.5;
+
+// Sprite size
+export const w = 106;
+export const h = 128;
+
+const step_x = Math.round(0.5 * w); // 53
+const step_y = Math.round(0.5 * h); // 64
+
+export function tile_to_screen(tile)
+{
+
+	return {
+		x: tile.x * i_x * step_x + tile.y * j_x * step_x,
+		y: tile.x * i_y * step_y + tile.y * j_y * step_y,
+	};
+}
+
+export function screen_to_tile(screen)
+{
+  const a = i_x * 0.5 * w;
+  const b = j_x * 0.5 * w;
+  const c = i_y * 0.5 * h;
+  const d = j_y * 0.5 * h;
+
+  const inv = invertMatrix(a, b, c, d);
+
+  return {
+    x: screen.x * inv.a + screen.y * inv.b,
+    y: screen.x * inv.c + screen.y * inv.d,
+  };
+}
+
+// Matrix inversion helper
+function invertMatrix(a, b, c, d) {
+	// Determinant
+	const det = a * d - b * c;
+
+	if (det === 0)
+	{
+	  throw new Error("Matrix is not invertible (determinant = 0).");
+	}
+	const invDet = 1 / det;
+  
+	return {
+	  a: invDet * d,
+	  b: invDet * -b,
+	  c: invDet * -c,
+	  d: invDet * a,
+	};
+  }
+
+// Example usage:
+// const tile = { x: 2, y: 3 };
+// const screen = tile_to_screen(tile, true);
+// const grid = toGridCoordinate(screen);
