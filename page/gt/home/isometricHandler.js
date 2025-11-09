@@ -14,42 +14,64 @@ const step_y = h / 2;
 export function tile_to_screen(tile) {
 	if (!tile || tile.x === undefined || tile.y === undefined) 
 	{
-	  throw new Error(`Invalid grid position: ${JSON.stringify(tile)}`);
+		throw new Error(`Invalid grid position: ${JSON.stringify(tile)}`);
 	}
-	
+
 	return {
-	  x: tile.x * i_x * step_x + tile.y * j_x * step_x,
-	  y: tile.x * i_y * step_y + tile.y * j_y * step_y,
+		x: tile.x * i_x * step_x + tile.y * j_x * step_x,
+		y: tile.x * i_y * step_y + tile.y * j_y * step_y,
 	};
-  }
+}
 
 export function screen_to_tile(screen)
 {
 	if (!screen || screen.x === undefined || screen.y === undefined)
 		{
-	  throw new Error(`Invalid screen position: ${JSON.stringify(screen)}`);
+		throw new Error(`Invalid screen position: ${JSON.stringify(screen)}`);
 	}
-  
+
 	const a = i_x * step_x;      // 53
 	const b = j_x * step_x;      // -53
 	const c = i_y * step_y;      // 32
 	const d = j_y * step_y;      // 32
-  
-	const inv = invertMatrix(a, b, c, d);
-  
-	return {
-	  x: screen.x * inv.a + screen.y * inv.b,
-	  y: screen.x * inv.c + screen.y * inv.d,
-	};
-  }
 
-  export function tile_to_screen_pixels(tile) {
+	const inv = invertMatrix(a, b, c, d);
+
+	return {
+		x: screen.x * inv.a + screen.y * inv.b,
+		y: screen.x * inv.c + screen.y * inv.d,
+	};
+}
+
+export function screen_pixel_to_tile(screenAbs, origin) {
+	if (!screenAbs || screenAbs.x === undefined || screenAbs.y === undefined) {
+		throw new Error(`Invalid screenAbs: ${JSON.stringify(screenAbs)}`);
+	}
+	if (!origin) {
+		throw new Error("origin required: { centerX, centerY, startX, startY }");
+	}
+	const { centerX = 0, centerY = 0, startX = 0, startY = 0 } = origin;
+
+	// Convert the event's absolute screen point back into the local (centered) coordinates
+	const localCenterX = screenAbs.x - centerX - startX + w / 2;
+	const localCenterY = screenAbs.y - centerY - startY + h;
+
+	// get fractional tile coordinates
+	const fracTile = screen_to_tile({ x: localCenterX, y: localCenterY });
+
+	const tileX = Math.floor(fracTile.x - 0.5);
+	const tileY = Math.floor(fracTile.y + 0.5);
+
+	return { x: tileX, y: tileY, frac: fracTile };
+}
+
+export function tile_to_screen_pixels(tile) {
 	const screenPos = tile_to_screen(tile);
 	return {
-	  x: Math.round(screenPos.x - w / 2),   // Convert center to top-left
-	  y: Math.round(screenPos.y - h),       // Convert center to top-left
+		x: Math.round(screenPos.x - w / 2),   // Convert center to top-left
+		y: Math.round(screenPos.y - h),       // Convert center to top-left
 	};
-  }
+}
 
 // Matrix inversion helper
 function invertMatrix(a, b, c, d) {
@@ -58,19 +80,14 @@ function invertMatrix(a, b, c, d) {
 
 	if (det === 0)
 	{
-	  throw new Error("Matrix is not invertible (determinant = 0).");
+		throw new Error("Matrix is not invertible (determinant = 0).");
 	}
 	const invDet = 1 / det;
-  
-	return {
-	  a: invDet * d,
-	  b: invDet * -b,
-	  c: invDet * -c,
-	  d: invDet * a,
-	};
-  }
 
-// Example usage:
-// const tile = { x: 2, y: 3 };
-// const screen = tile_to_screen(tile, true);
-// const grid = toGridCoordinate(screen);
+	return {
+		a: invDet * d,
+		b: invDet * -b,
+		c: invDet * -c,
+		d: invDet * a,
+	};
+}

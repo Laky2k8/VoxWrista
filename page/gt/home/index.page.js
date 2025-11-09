@@ -10,116 +10,132 @@ let touchedTile = null;
 
 const logger = Logger.getLogger("VoxWrista");
 Page({
-  onInit() {
-    logger.debug("page onInit invoked");
-  },
-  build() {
-    logger.debug("page build invoked");
-     
+	onInit() {
+		logger.debug("page onInit invoked");
+	},
+	build() {
+		logger.debug("page build invoked");
+		 
 
-    const { width, height} = getDeviceInfo();
+		const { width, height} = getDeviceInfo();
 
-    const centerX = Math.round(width / 2);   // 195
-    const centerY = Math.round(height / 4);  // 113 (instead of 112.5)
+		const centerX = Math.round(width / 2);   // 195
+		const centerY = Math.round(height / 4);  // 113 (instead of 112.5)
 
-    console.log("Device Width: " + width + " Height: " + height);
+		console.log("Device Width: " + width + " Height: " + height);
 
-    const canvas = hmUI.createWidget(hmUI.widget.CANVAS, CANVAS_STYLE);
+		const canvas = hmUI.createWidget(hmUI.widget.CANVAS, CANVAS_STYLE);
 
-    let startX = 0, startY = isoHandler.h;
-    let rows = 4, cols = 4;
+		let startX = 0, startY = isoHandler.h;
+		let rows = 4, cols = 4;
 
-    /*for(let i = 0; i < 6; i++)
-    {
-      for(let j = 0; j < 7; j++)
-      {
-        canvas.drawImage({
-          x: startX + (j * 53),
-          y: startY + (i * 64),
-          w: 53, // Width correction
-          h: 64,
-          alpha:255,
-          image: "blocks/grass.png"
-        });
-      }
-    }*/
+		/*for(let i = 0; i < 6; i++)
+		{
+			for(let j = 0; j < 7; j++)
+			{
+				canvas.drawImage({
+					x: startX + (j * 53),
+					y: startY + (i * 64),
+					w: 53, // Width correction
+					h: 64,
+					alpha:255,
+					image: "blocks/grass.png"
+				});
+			}
+		}*/
 
-    // Draw commands (so that we can sort by depth later)
-    const drawCommands = [];
+		// Draw commands (so that we can sort by depth later)
 
-    for(let i = 0; i < rows; i++)
-    {
-      for(let j = 0; j < cols; j++)
-      {
+		const render = () => {
 
-        const tile_pos = {x: i, y: j};
+			const drawCommands = [];
 
-        const orig_screen_pos = isoHandler.tile_to_screen_pixels(tile_pos);
-        let screenX = startX + orig_screen_pos.x;
-        let screenY = startY + orig_screen_pos.y;
+			for(let i = 0; i < rows; i++)
+			{
+				for(let j = 0; j < cols; j++)
+				{
 
-        if((touchedTile != null) && (touchedTile.x === i) && (touchedTile.y === j))
-        {
-          screenY -= (isoHandler.h / 2) - 10;
-        }
+					const tile_pos = {x: i, y: j};
 
-        drawCommands.push({
-          depth: i + j,
-          x: Math.round(screenX + centerX),
-          y: Math.round(screenY + centerY),
-          w: isoHandler.w,
-          h: isoHandler.h
-        });
+					const orig_screen_pos = isoHandler.tile_to_screen_pixels(tile_pos);
+					let screenX = startX + orig_screen_pos.x;
+					let screenY = startY + orig_screen_pos.y;
 
-        //console.log(`Tile(${i},${j}): final = (${Math.round(screenX + centerX)}, ${Math.round(screenY + centerY)})`);
-      }
-    }
+					if((touchedTile != null) && (touchedTile.x === i) && (touchedTile.y === j))
+					{
+						screenY -= (isoHandler.h / 2) - 10;
+					}
 
-    drawCommands.sort((a,b) => a.depth - b.depth);
+					drawCommands.push({
+						depth: i + j,
+						x: Math.round(screenX + centerX),
+						y: Math.round(screenY + centerY),
+						w: isoHandler.w,
+						h: isoHandler.h
+					});
 
-    for(const cmd of drawCommands)
-    {
-      console.log(`Drawing at (${cmd.x}, ${cmd.y}) size (${cmd.w}, ${cmd.h})`);
-      canvas.drawImage({
-        x: cmd.x,
-        y: cmd.y,
-        w: cmd.w, // Width correction
-        h: cmd.h,
-        alpha:255,
-        image: "blocks/grass.png"
-      });
-    }
-    
-    /*canvas.addEventListener(event.CLICK_UP, function cb(info) 
-    {
-      const touchX = info.x - startX;
-      const touchY = info.y - startY;
+					//console.log(`Tile(${i},${j}): final = (${Math.round(screenX + centerX)}, ${Math.round(screenY + centerY)})`);
+				}
+			}
 
-      touchedTile = isoHandler.screen_to_tile({x: touchX, y: touchY});
+			drawCommands.sort((a,b) => a.depth - b.depth);
 
-      logger.debug(`Touch at screen (${evt.x}, ${evt.y}) -> tile frac (${touchedTile.x.toFixed(2)}, ${touchedTile.y.toFixed(2)})`);
-    });*/
+			for(const cmd of drawCommands)
+			{
+				console.log(`Drawing at (${cmd.x}, ${cmd.y}) size (${cmd.w}, ${cmd.h})`);
+				canvas.drawImage({
+					x: cmd.x,
+					y: cmd.y,
+					w: cmd.w, // Width correction
+					h: cmd.h,
+					alpha:255,
+					image: "blocks/grass.png"
+				});
+			}
+		}
 
-    canvas.addEventListener(event.CLICK_UP, function cb(info) {
-      // Account for the centering offset applied during rendering
-      const touchX = info.x - startX - centerX;
-      const touchY = info.y - startY - centerY;
-      
-      const adjustedX = touchX + isoHandler.w / 2;
-      const adjustedY = touchY + isoHandler.h;
-      const touchedTile_frac = isoHandler.screen_to_tile({x: adjustedX, y: adjustedY});
-      
-      const clickedI = Math.floor(touchedTile_frac.x + 0.00001);
-      const clickedJ = Math.floor(touchedTile_frac.y + 0.00001);
-      
-      touchedTile = { x: clickedI, y: clickedJ };
-      
-      logger.debug(`tile (${clickedI}, ${clickedJ})`);
-    })
+		render();
+		
+		canvas.addEventListener(event.CLICK_UP, function cb(info) {
+			console.log(`Touch at screen (${info.x}, ${info.y})`);
+
+			const origin = {centerX, centerY, startX, startY};
+			const hit = isoHandler.screen_pixel_to_tile({x: info.x, y: info.y}, origin);
+			console.log("Fractional tile coords:", hit.frac, "Rounded ->", hit.x, hit.y);
+
+			if (hit.x >= 0 && hit.x < rows && hit.y >= 0 && hit.y < cols)
+			{
+				touchedTile = { x: hit.x, y: hit.y };
+			}
+			else
+			{
+				touchedTile = null;
+			}
 
 
-  },
-  onDestroy() {
-    logger.debug("page onDestroy invoked");
-  },
+			canvas.clear({x:0, y:0, w:width, h:height});
+
+			render();
+
+			canvas.drawText({
+				x: 10,
+				y: 160,
+				text_size: 30,
+				text: `Touch at (${info.x}, ${info.y})`,
+			});
+
+			canvas.drawText({
+				x: 10,
+				y: 260,
+				text_size: 30,
+				text: `Tile: (${touchedTile ? `${touchedTile.x},${touchedTile.y}` : "none"})`,
+			});
+
+		})
+
+
+	},
+	onDestroy() {
+		logger.debug("page onDestroy invoked");
+	},
 });
