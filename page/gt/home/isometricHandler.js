@@ -8,32 +8,48 @@ const j_y = 0.5;
 export const w = 106;
 export const h = 128;
 
-const step_x = Math.round(0.5 * w); // 53
-const step_y = Math.round(0.5 * h); // 64
+const step_x = w / 2; 
+const step_y = h / 2; 
 
-export function tile_to_screen(tile)
-{
-
+export function tile_to_screen(tile) {
+	if (!tile || tile.x === undefined || tile.y === undefined) 
+	{
+	  throw new Error(`Invalid grid position: ${JSON.stringify(tile)}`);
+	}
+	
 	return {
-		x: tile.x * i_x * step_x + tile.y * j_x * step_x,
-		y: tile.x * i_y * step_y + tile.y * j_y * step_y,
+	  x: tile.x * i_x * step_x + tile.y * j_x * step_x,
+	  y: tile.x * i_y * step_y + tile.y * j_y * step_y,
 	};
-}
+  }
 
 export function screen_to_tile(screen)
 {
-  const a = i_x * 0.5 * w;
-  const b = j_x * 0.5 * w;
-  const c = i_y * 0.5 * h;
-  const d = j_y * 0.5 * h;
+	if (!screen || screen.x === undefined || screen.y === undefined)
+		{
+	  throw new Error(`Invalid screen position: ${JSON.stringify(screen)}`);
+	}
+  
+	const a = i_x * step_x;      // 53
+	const b = j_x * step_x;      // -53
+	const c = i_y * step_y;      // 32
+	const d = j_y * step_y;      // 32
+  
+	const inv = invertMatrix(a, b, c, d);
+  
+	return {
+	  x: screen.x * inv.a + screen.y * inv.b,
+	  y: screen.x * inv.c + screen.y * inv.d,
+	};
+  }
 
-  const inv = invertMatrix(a, b, c, d);
-
-  return {
-    x: screen.x * inv.a + screen.y * inv.b,
-    y: screen.x * inv.c + screen.y * inv.d,
-  };
-}
+  export function tile_to_screen_pixels(tile) {
+	const screenPos = tile_to_screen(tile);
+	return {
+	  x: Math.round(screenPos.x - w / 2),   // Convert center to top-left
+	  y: Math.round(screenPos.y - h),       // Convert center to top-left
+	};
+  }
 
 // Matrix inversion helper
 function invertMatrix(a, b, c, d) {
