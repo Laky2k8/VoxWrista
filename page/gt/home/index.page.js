@@ -72,6 +72,13 @@ Page({
 
 		let startX = 0, startY = isoHandler.h;
 
+		let pan = { x: startX, y: startY }; 
+		let isPanning = false;
+		let last_pointer = {x: 0, y: 0};
+		let moved_since_down = false;
+		let last_render_time = 0;
+
+
 
 		/*for(let i = 0; i < 6; i++)
 		{
@@ -135,8 +142,8 @@ Page({
 				const tile_pos = {x: block.x, y: block.y};
 
 				const orig_screen_pos = isoHandler.tile_to_screen_pixels(tile_pos);
-				let screenX = startX + orig_screen_pos.x;
-				let screenY = startY + orig_screen_pos.y - (block.z * (isoHandler.h / 2.5));
+				let screenX = pan.x + orig_screen_pos.x;
+				let screenY = pan.y + orig_screen_pos.y - (block.z * (isoHandler.h / 2.5));
 
 				if((selectedTile != null) && (selectedTile.x === block.x) && (selectedTile.y === block.y) && (selectedTile.z === block.z))
 				{
@@ -152,6 +159,12 @@ Page({
 						break;
 					default:
 						drawnSprite = "blocks/grid.png";
+				}
+
+				// Check if on screen, don't draw if not
+				if(screenX + centerX + isoHandler.w < 0 || screenX + centerX > width || screenY + centerY + isoHandler.h < 0 || screenY + centerY > height)
+				{
+					continue;
 				}
 
 				drawCommands.push({
@@ -192,31 +205,80 @@ Page({
 			text: `Tile: (${selectedTile ? `${selectedTile.x},${selectedTile.y},${selectedTile.z}` : "none"})`,
 		});
 
+		// Panning
+		canvas.addEventListener(event.CLICK_DOWN, (info) => {
+			isPanning = true;
+			last_pointer.x = info.x;
+			last_pointer.y = info.y;
+			moved_since_down = false;
+		});
+
+		canvas.addEventListener(event.MOVE, (info) => {
+			if (!isPanning) return;
+
+			const dx = info.x - last_pointer.x;
+			const dy = info.y - last_pointer.y;
+
+			if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved_since_down = true;
+
+			pan.x += dx;
+			pan.y += dy;
+
+			last_pointer.x = info.x;
+			last_pointer.y = info.y;
+
+			const now = Date.now();
+			if (now - last_render_time > 33) // around 30FPS
+			{
+				canvas.clear({ x:0, y:0, w: width, h: height });
+				render();
+				last_render_time = now;
+			}
+		});
+
 		
 		canvas.addEventListener(event.CLICK_UP, function cb(info) {
-			console.log(`Touch at screen (${info.x}, ${info.y})`);
+			
 
-			const origin = {centerX, centerY, startX, startY};
-			const maxZ = world.reduce((m, b) => Math.max(m, b.z), 0); // The highest Z value
+			isPanning = false;
 
-			const hit = isoHandler.screen_pixel_to_tile({x: info.x - 10, y: info.y + 60}, origin, { maxZ, neighbourRadius: 1, worldBlocks: world });
-			console.log("Fractional tile coords:", hit.frac, "Rounded ->", hit.x, hit.y, "z ->", hit.z);
-
-			if (hit.x >= 0 && hit.x < rows && hit.y >= 0 && hit.y < cols && hit.z >= 0 && hit.z <= maxZ)
+			if(!moved_since_down)
 			{
-				selectedTile = { x: hit.x, y: hit.y, z: hit.z };
+				// Didn't move: tap
+
+				console.log(`Touch at screen (${info.x}, ${info.y})`);
+
+				const origin = {centerX, centerY, startX: pan.x, startY: pan.y};
+				const maxZ = world.reduce((m, b) => Math.max(m, b.z), 0); // The highest Z value
+	
+				const hit = isoHandler.screen_pixel_to_tile({x: info.x - 10, y: info.y + 60}, origin, { maxZ, neighbourRadius: 1, worldBlocks: world });
+				console.log("Fractional tile coords:", hit.frac, "Rounded ->", hit.x, hit.y, "z ->", hit.z);
+	
+				if (hit.x >= 0 && hit.x < rows && hit.y >= 0 && hit.y < cols && hit.z >= 0 && hit.z <= maxZ)
+				{
+					selectedTile = { x: hit.x, y: hit.y, z: hit.z };
+				}
+				else
+				{
+					selectedTile = null;
+				}
+	
+	
+				canvas.clear({x:0, y:0, w:width, h:height});
+	
+				render();
 			}
 			else
 			{
-				selectedTile = null;
+				// Did move: pan
+				canvas.clear({ x:0, y:0, w: width, h: height });
+				render();
 			}
 
 
-			canvas.clear({x:0, y:0, w:width, h:height});
 
-			render();
-
-			canvas.drawText({
+			// DEBUG tile info
+			/*canvas.drawText({
 				x: 10,
 				y: 160,
 				text_size: 30,
@@ -228,7 +290,7 @@ Page({
 				y: 260,
 				text_size: 30,
 				text: `Tile: (${selectedTile ? `${selectedTile.x},${selectedTile.y},${selectedTile.z}` : "none"})`,
-			});
+			});*/
 
 		});
 
@@ -247,7 +309,12 @@ Page({
 		breakBtn.addEventListener(hmUI.event.CLICK_UP, () => 
 		{
 			// Remove block at selected tile
-			world = world.filter(b => !(b.x === selectedTile.x && b.y === selectedTile.y && b.z === selectedTile.z));
+
+			if(selectedTile.type !== "grid")
+			{
+				world = world.filter(b => !(b.x === selectedTile.x && b.y === selectedTile.y && b.z === selectedTile.z));
+			}
+			
 
 			render();
 		});
