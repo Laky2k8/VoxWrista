@@ -11,8 +11,28 @@ let world = [];
 
 let rows = 10, cols = 10;
 
+function computeBlocks()
+{
+	for (const block of world)
+	{
+		const block_pos = isoHandler.tile_to_screen_pixels({x: block.x, y: block.y});
+
+		// store top-left pixel relative to tile (independent of pan)
+		block.origX = block_pos.x; 
+		block.origY = block_pos.y - (block.z * (isoHandler.h / 2.5));
+
+		block.depth = block.x + block.y + block.z;
+
+		block.sprite = (block.type === "grass") ? "blocks/grass.png" : "blocks/grid.png";
+	}
+
+	world.sort((a,b) => a.depth - b.depth);
+}
+
 const logger = Logger.getLogger("VoxWrista");
 Page({
+
+
 
 	onInit()
 	{
@@ -33,6 +53,10 @@ Page({
 				}
 			}
 		}
+
+		computeBlocks();
+
+
 	},
 
 	build()
@@ -98,103 +122,34 @@ Page({
 		// Draw commands (so that we can sort by depth later)
 
 		const render = () => {
+		// local copies to avoid global lookups each iteration
+		const cX = centerX, cY = centerY, W = width, H = height;
+		const tileW = isoHandler.w, tileH = isoHandler.h;
+		const pxPanX = pan.x, pxPanY = pan.y;
 
+		// Iterate the already-sorted world; cull by bbox (cheap checks)
+		for (let i = 0, n = world.length; i < n; ++i)
+		{
+			const b = world[i];
 
-			
+			// compute final screen pos (integer math using |0 is faster than Math.round)
+			const sx = ((pxPanX + b.origX) + cX) | 0;
+			const sy = ((pxPanY + b.origY) + cY) | 0;
 
-			const drawCommands = [];
+			// cheap bounding box cull
+			if (sx + tileW < 0 || sx > W || sy + tileH < 0 || sy > H) continue;
 
-			/*for(let i = 0; i < rows; i++)
-			{
-				for(let j = 0; j < cols; j++)
-				{
-
-					let alpha = 255;
-
-					const tile_pos = {x: i, y: j};
-
-					const orig_screen_pos = isoHandler.tile_to_screen_pixels(tile_pos);
-					let screenX = startX + orig_screen_pos.x;
-					let screenY = startY + orig_screen_pos.y;
-
-					if((selectedTile != null) && (selectedTile.x === i) && (selectedTile.y === j))
-					{
-						alpha = 128;
-					}
-
-					drawCommands.push({
-						depth: i + j,
-						x: Math.round(screenX + centerX),
-						y: Math.round(screenY + centerY),
-						w: isoHandler.w,
-						h: isoHandler.h,
-						alpha: alpha,
-					});
-
-					//console.log(`Tile(${i},${j}): final = (${Math.round(screenX + centerX)}, ${Math.round(screenY + centerY)})`);
-				}
-			}*/
-
-			for(const block of world)
-			{
-				let alpha = 255;
-
-				const tile_pos = {x: block.x, y: block.y};
-
-				const orig_screen_pos = isoHandler.tile_to_screen_pixels(tile_pos);
-				let screenX = pan.x + orig_screen_pos.x;
-				let screenY = pan.y + orig_screen_pos.y - (block.z * (isoHandler.h / 2.5));
-
-				if((selectedTile != null) && (selectedTile.x === block.x) && (selectedTile.y === block.y) && (selectedTile.z === block.z))
-				{
-					alpha = 128;
-				}
-
-				let drawnSprite = "";
-
-				switch(block.type)
-				{
-					case "grass":
-						drawnSprite = "blocks/grass.png";
-						break;
-					default:
-						drawnSprite = "blocks/grid.png";
-				}
-
-				// Check if on screen, don't draw if not
-				if(screenX + centerX + isoHandler.w < 0 || screenX + centerX > width || screenY + centerY + isoHandler.h < 0 || screenY + centerY > height)
-				{
-					continue;
-				}
-
-				drawCommands.push({
-					depth: block.x + block.y + block.z,
-					x: Math.round(screenX + centerX),
-					y: Math.round(screenY + centerY),
-					w: isoHandler.w,
-					h: isoHandler.h,
-					alpha: alpha,
-					sprite: drawnSprite
-				});
-			}
-
-			drawCommands.sort((a,b) => a.depth - b.depth);
-
-
-
-			for(const cmd of drawCommands)
-			{
-				console.log(`Drawing at (${cmd.x}, ${cmd.y}) size (${cmd.w}, ${cmd.h})`);
-				canvas.drawImage({
-					x: cmd.x,
-					y: cmd.y,
-					w: cmd.w, // Width correction
-					h: cmd.h,
-					alpha: cmd.alpha,
-					image: cmd.sprite
-				});
-			}
+			// draw (avoid extra object allocations)
+			canvas.drawImage({
+				x: sx,
+				y: sy,
+				w: tileW,
+				h: tileH,
+				alpha: (selectedTile && selectedTile.x === b.x && selectedTile.y === b.y && selectedTile.z === b.z) ? 128 : 255,
+				image: b.sprite
+			});
 		}
+		};
 
 		render();
 
@@ -303,6 +258,8 @@ Page({
 				type: "grass"
 			});
 
+			computeBlocks();
+
 			render();
 		});
 
@@ -315,6 +272,7 @@ Page({
 				world = world.filter(b => !(b.x === selectedTile.x && b.y === selectedTile.y && b.z === selectedTile.z));
 			}
 			
+			computeBlocks();
 
 			render();
 		});
