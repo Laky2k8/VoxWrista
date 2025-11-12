@@ -9,6 +9,8 @@ let selectedTile = null;
 
 let world = [];
 
+let rows = 10, cols = 10;
+
 const logger = Logger.getLogger("VoxWrista");
 Page({
 
@@ -16,17 +18,17 @@ Page({
 	{
 		logger.debug("page onInit invoked");
 
-		for(let x = 0; x < 4; x++)
+		for(let x = 0; x < rows; x++)
 		{
-			for(let y = 0; y < 4; y++)
+			for(let y = 0; y < cols; y++)
 			{
-				for(let z = 0; z < 2; z++)
+				for(let z = 0; z < 1; z++)
 				{
 					world.push({
 						x: x,
 						y: y,
 						z: z,
-						type: "grass"
+						type: "grid"
 					});
 				}
 			}
@@ -69,7 +71,7 @@ Page({
 		});
 
 		let startX = 0, startY = isoHandler.h;
-		let rows = 4, cols = 4;
+
 
 		/*for(let i = 0; i < 6; i++)
 		{
@@ -134,11 +136,22 @@ Page({
 
 				const orig_screen_pos = isoHandler.tile_to_screen_pixels(tile_pos);
 				let screenX = startX + orig_screen_pos.x;
-				let screenY = startY + orig_screen_pos.y - (block.z * (isoHandler.h / 2));
+				let screenY = startY + orig_screen_pos.y - (block.z * (isoHandler.h / 2.5));
 
 				if((selectedTile != null) && (selectedTile.x === block.x) && (selectedTile.y === block.y) && (selectedTile.z === block.z))
 				{
 					alpha = 128;
+				}
+
+				let drawnSprite = "";
+
+				switch(block.type)
+				{
+					case "grass":
+						drawnSprite = "blocks/grass.png";
+						break;
+					default:
+						drawnSprite = "blocks/grid.png";
 				}
 
 				drawCommands.push({
@@ -148,10 +161,13 @@ Page({
 					w: isoHandler.w,
 					h: isoHandler.h,
 					alpha: alpha,
+					sprite: drawnSprite
 				});
 			}
 
 			drawCommands.sort((a,b) => a.depth - b.depth);
+
+
 
 			for(const cmd of drawCommands)
 			{
@@ -162,23 +178,33 @@ Page({
 					w: cmd.w, // Width correction
 					h: cmd.h,
 					alpha: cmd.alpha,
-					image: "blocks/grass.png"
+					image: cmd.sprite
 				});
 			}
 		}
 
 		render();
+
+		canvas.drawText({
+			x: 10,
+			y: 260,
+			text_size: 30,
+			text: `Tile: (${selectedTile ? `${selectedTile.x},${selectedTile.y},${selectedTile.z}` : "none"})`,
+		});
+
 		
 		canvas.addEventListener(event.CLICK_UP, function cb(info) {
 			console.log(`Touch at screen (${info.x}, ${info.y})`);
 
 			const origin = {centerX, centerY, startX, startY};
-			const hit = isoHandler.screen_pixel_to_tile({x: info.x, y: info.y}, origin);
-			console.log("Fractional tile coords:", hit.frac, "Rounded ->", hit.x, hit.y);
+			const maxZ = world.reduce((m, b) => Math.max(m, b.z), 0); // The highest Z value
 
-			if (hit.x >= 0 && hit.x < rows && hit.y >= 0 && hit.y < cols)
+			const hit = isoHandler.screen_pixel_to_tile({x: info.x - 10, y: info.y + 60}, origin, { maxZ, neighbourRadius: 1, worldBlocks: world });
+			console.log("Fractional tile coords:", hit.frac, "Rounded ->", hit.x, hit.y, "z ->", hit.z);
+
+			if (hit.x >= 0 && hit.x < rows && hit.y >= 0 && hit.y < cols && hit.z >= 0 && hit.z <= maxZ)
 			{
-				selectedTile = { x: hit.x, y: hit.y };
+				selectedTile = { x: hit.x, y: hit.y, z: hit.z };
 			}
 			else
 			{
@@ -201,13 +227,29 @@ Page({
 				x: 10,
 				y: 260,
 				text_size: 30,
-				text: `Tile: (${selectedTile ? `${selectedTile.x},${selectedTile.y}` : "none"})`,
+				text: `Tile: (${selectedTile ? `${selectedTile.x},${selectedTile.y},${selectedTile.z}` : "none"})`,
 			});
 
 		});
 
-		placeBtn.addEventListener(hmUI.event.CLICK_UP, () => {
-			console.log("Place button clicked");
+		placeBtn.addEventListener(hmUI.event.CLICK_UP, () => 
+		{
+			world.push({
+				x: selectedTile.x,
+				y: selectedTile.y,
+				z: selectedTile.z + 1,
+				type: "grass"
+			});
+
+			render();
+		});
+
+		breakBtn.addEventListener(hmUI.event.CLICK_UP, () => 
+		{
+			// Remove block at selected tile
+			world = world.filter(b => !(b.x === selectedTile.x && b.y === selectedTile.y && b.z === selectedTile.z));
+
+			render();
 		});
 
 
