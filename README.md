@@ -39,6 +39,12 @@ You can download the app from the Zepp OS store soon. Until then:
 
 <h2>Install (on a real device)</h2>
 
+<h3>You can upload the .zab executable to your watch via Gadgetbridge.</h3>
+
+<br>
+
+<h3>You can also build and install from source:</h3>
+
 Got this great tutorial from https://github.com/griffi-gh/zepp-fediclient!
 
 Prerequisites:
@@ -52,7 +58,7 @@ Prerequisites:
   (Optional) Some options can only be changed at compile-time, check/modify <code>configuration.js</code> as needed
 </p>
 
-Build and install from source:
+
 
 <h3>Using preview/QR-code:</h3>
 
