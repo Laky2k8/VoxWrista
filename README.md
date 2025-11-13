@@ -11,6 +11,8 @@ Features:
 
 More blocks (and maybe world saving?) coming soon!
 
+**NOTE: This app was developed for the Amazfit Bip 6. I did not test it for any other device, and while it should work for any square Zepp OS smartwatch, I cannot guarantee it will.**
+
 <br>
 
 # Screenshots
@@ -37,13 +39,13 @@ You can download the app from the Zepp OS store soon. Until then:
 
 <h2>Install (on a real device)</h2>
 
+Got this great tutorial from https://github.com/griffi-gh/zepp-fediclient!
+
 Prerequisites:
-<ul>
-  <li>Make sure your device is supported (check the list above)</li>
-  <li><a href="https://docs.zepp.com/docs/1.0/guides/tools/zepp-app/#developer-mode-opening-method">Activate the Developer Mode is in the Zepp app (click for guide)</a></li>
-  <li>Install Node.js/npm</li>
-  <li>Install <code>zeus</code> (<code>npm i @zeppos/zeus-cli -g</code>)</li>
-</ul>
+- Make sure your device is supported</li>
+- <a href="https://docs.zepp.com/docs/1.0/guides/tools/zepp-app/#developer-mode-opening-method">Activate the Developer Mode is in the Zepp app (click for guide)</a></li>
+- Install Node.js/npm</li>
+- Install <code>zeus</code> (<code>npm i @zeppos/zeus-cli -g</code>)</li>
 
 <p>
   Warning: Make sure <code>DEPLOYMENT_TYPE</code> is set to <code>"real"</code> in configuration.js.<br>
